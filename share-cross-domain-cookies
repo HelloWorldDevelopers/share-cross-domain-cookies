@@ -1,0 +1,48 @@
+@PostMapping("token")
+	public ResponseEntity<?> crateToken(HttpServletRequest request,HttpServletResponse res,@RequestBody Credentials credentials, HttpSession session) {
+		Map<String, Object> map = new HashMap<>();
+		if (credentials.getUserName() == null)
+			return ResponseEntity.ok("not valid");
+		try {
+  		
+		//	String payLoad = rsaUtil.decrypt(credentials.getMessage());
+//			boolean isSignatureVerified = rsaUtil.verifySignature(payLoad, credentials.getSignature(),
+//					credentials.getPublicKey());
+//			if (!isSignatureVerified) {
+//				map.put("token", null);
+//				map.put("success", false);
+//				return ResponseEntity.ok(map);
+//			} else {
+//				JSONObject jsonData = new JSONObject(payLoad);
+//				String userName = jsonData.getString("userName");
+//				String password = jsonData.getString("password");
+//				System.out.println(userName+"----"+password);
+			 	 authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(credentials.getUserName(), Sha1Encriptor.encryptThisString(credentials.getPassword())));
+			 	 UserDetail userDetails = this.customeUserDetailsService.loadUserByUsername(credentials.getUserName());
+ 				String token = this.jwtUtil.generateToken(userDetails,request);
+ 				System.out.println(token);
+   				//String encodeToString = Base64.getEncoder().encodeToString(token.getBytes());
+   				String rasToken = rSAUtil.encriptTokenUsingRsa(token);
+   				if(rasToken.length()>75) {
+    				Cookie cookie = new Cookie("__signature", rasToken.substring(75, 175));
+   					cookie.setPath("/");
+   					cookie.setDomain("172.20.1.38");
+   					cookie.setHttpOnly(true);
+   					cookie.setMaxAge(7200);
+   					res.addCookie(cookie);
+   				}
+ 				
+ 				if (Objects.nonNull(rasToken)) {
+ 					map.put("token", rasToken);
+					map.put("success", true);
+ 					return ResponseEntity.ok(map);
+				}
+		//	}
+		} catch (Exception e) {
+			e.printStackTrace();
+			log.error("error occor during create token");
+		}
+		map.put("token", null);
+		map.put("success", false);
+		return ResponseEntity.ok(map);
+	}
